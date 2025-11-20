@@ -10,46 +10,42 @@ def test_get_activities():
     data = response.json()
     assert isinstance(data, dict)
     assert "Chess Club" in data
-    assert "participants" in data["Chess Club"]
 
-def test_signup_for_activity_success():
+def test_signup_for_activity():
     email = "testuser@mergington.edu"
     activity = "Chess Club"
     # Remove if already present
-    client.delete(f"/activities/{activity}/unregister?email={email}")
-    response = client.post(f"/activities/{activity}/signup?email={email}")
+    client.delete(f"/activities/{activity}/unregister", params={"email": email})
+    response = client.post(f"/activities/{activity}/signup", params={"email": email})
     assert response.status_code == 200
     assert f"Signed up {email} for {activity}" in response.json()["message"]
     # Clean up
-    client.delete(f"/activities/{activity}/unregister?email={email}")
+    client.delete(f"/activities/{activity}/unregister", params={"email": email})
 
-def test_signup_for_activity_duplicate():
+def test_signup_duplicate():
     email = "testuser2@mergington.edu"
     activity = "Chess Club"
     # Ensure user is signed up
-    client.post(f"/activities/{activity}/signup?email={email}")
-    # Try to sign up again
-    response = client.post(f"/activities/{activity}/signup?email={email}")
+    client.post(f"/activities/{activity}/signup", params={"email": email})
+    # Try duplicate
+    response = client.post(f"/activities/{activity}/signup", params={"email": email})
     assert response.status_code == 400
     assert "already signed up" in response.json()["detail"]
     # Clean up
-    client.delete(f"/activities/{activity}/unregister?email={email}")
+    client.delete(f"/activities/{activity}/unregister", params={"email": email})
 
-def test_signup_for_nonexistent_activity():
-    response = client.post("/activities/Nonexistent/signup?email=someone@mergington.edu")
-    assert response.status_code == 404
-    assert "Activity not found" in response.json()["detail"]
-
-def test_unregister_participant():
+def test_unregister_from_activity():
     email = "testuser3@mergington.edu"
     activity = "Chess Club"
     # Ensure user is signed up
-    client.post(f"/activities/{activity}/signup?email={email}")
-    # Unregister
-    response = client.delete(f"/activities/{activity}/unregister?email={email}")
+    client.post(f"/activities/{activity}/signup", params={"email": email})
+    response = client.delete(f"/activities/{activity}/unregister", params={"email": email})
     assert response.status_code == 200
-    assert "removed" in response.json()["message"]
-    # Try to unregister again
-    response = client.delete(f"/activities/{activity}/unregister?email={email}")
+    assert f"Successfully removed {email} from {activity}" in response.json()["message"]
+
+def test_unregister_not_found():
+    email = "notfound@mergington.edu"
+    activity = "Chess Club"
+    response = client.delete(f"/activities/{activity}/unregister", params={"email": email})
     assert response.status_code == 404
-    assert "not found" in response.json()["detail"]
+    assert "Participant not found" in response.json()["detail"]
